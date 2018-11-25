@@ -1,0 +1,140 @@
+<html>
+<head>
+<script>
+  window.addEventListener('load', function() {
+    var iframe = document.getElementById('page_frame');
+    var url = document.getElementById('url');
+
+    var quit_status = 0;
+    var downloadTimer;
+
+    function sleep(ms) {
+      console.log(ms);
+      if (ms!=10) {
+        var timeleft = ms/1000;
+        console.log("timeleft " + timeleft);
+        downloadTimer = setInterval(function(){
+          if(quit_status == 1) {
+            clearInterval(downloadTimer);
+          }
+          timeleft--;
+          document.getElementById("countdowntimer").textContent = timeleft;
+          if(timeleft <= 0)
+              clearInterval(downloadTimer);
+        },1000);
+      }
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function random_news(sleep_seconds) {
+      await sleep(sleep_seconds || 120000);
+      const Http = new XMLHttpRequest();
+    	const url='http://localhost:3000/proxy_random_article?type=random';
+    	// Http.open("GET", url);
+    	// Http.send();
+    	//Http.onreadystatechange=(e)=>{
+    	//	console.log(Http.responseText)
+      //  iframe.src = Http.responseText;
+      //  window.document.domain = Http.responseText;
+      //  iframe.document.domain = Http.responseText;
+      //  url.textContent = Http.responseText;
+    	//}
+      iframe.src = "http://localhost:3000/proxy_random_article?type=random";
+    }
+
+    function next_article() {
+      random_news(10);
+    }
+    function quit_on() {
+      quit_status = 1;
+    }
+    function quit_off() {
+      quit_status = 0;
+      clearInterval(downloadTimer);
+    }
+    function resume() {
+      quit_off();
+      next();
+    }
+    function parse_keyevents(e) {
+      if(e.keyCode == 32) { //space
+        next_article();
+       }
+      if(e.keyCode == 81) { //q pauses execution
+        quit_on()
+      }
+      if(e.keyCode == 67) { //c continues execution
+        resume()
+      }
+    }
+    window.addEventListener("keyup", function(e) {
+      parse_keyevents(e)
+    });
+
+    iframe.addEventListener("load", function() {
+      random_news();
+    });
+
+    iframe.addEventListener("keyup", function(e) {
+      parse_keyevents(e)
+    });
+
+    random_news(10);
+  });
+</script>
+
+<style>
+#url {
+  color: green;
+}
+#page_frame {
+  width: 100%;
+  height: 100%;
+  overflow:scroll;
+}
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  z-index: 10;
+  background: grey;
+
+}
+
+.header__content-text {
+  text-align: center;
+  padding: 15px 20px;
+}
+
+.page__content-container {
+  width: 100%;
+  height:100%;
+}
+
+</style>
+</head>
+<body>
+<div class="header">
+    <button id="next" onclick="next_article()">[next]</button> spacebar
+    <button id="stop" onclick="quit_on()">[stop]</button> q
+    <button id="continue" onclick="resume()">[continue]</button> c
+    <span id="url"></span><span id="countdowntimer">120 </span> Seconds left
+</div>
+<div class="page__content-container">
+<iframe id="page_frame" src="https://www.google.com" sandbox="allow-same-origin allow-scripts allow-forms" >
+  <script>
+    document.addEventListener("keyup", function(e) {
+      parse_keyevents(e)
+    });
+    document.addEventListener('pageshow', function() {
+      console.log(document.location);
+    	random_news()
+    });
+  </script>
+</iframe>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "topics" : {
+    "gop": {
+      "category":"politics"
+    },
+    "dnc" : {
+      "category":"politics"
+    },
+    "trump" : {
+      "category":"politics"
+    },
+    "bitcoin" : {
+      "category":"crypto"
+    },
+    "altcoin" : {
+      "category":"crypto"
+    },
+    "litecoin" : {
+      "category":"crypto"
+    },
+    "crypto" : {
+      "category":"crypto"
+    },
+    "top_headlines" : {
+      "categories" : ["generic", "politics"],
+      "query" : "top-headlines?sources=google-news"
+    },
+    "us_news" : {
+      "categories" : [ "generic", "politics"],
+      "query" : "top-headlines?country=us"
+    }
+  },
+  "app" : {
+    "news_api_key" : "get yours at https://newsapi.org/",
+    "log_level" : "debug",
+    "request_page_size" : 100,
+    "redis_host" : "127.0.0.1:6379",
+    "cache_warm_rate" : 43200
+  }
+}
