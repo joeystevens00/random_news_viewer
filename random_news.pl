@@ -190,6 +190,10 @@ sub warm_cache {
   unless(ref $json eq 'HASH') {
     $json = $REQUEST_FUNCTIONS->{$topic_name}->();
   }
+  unless(ref $json eq 'HASH') {
+    $log->error("Missing json can't warm cache");
+    return 0;
+  }
 
   $json->{refresh_time} = time;
   my $ret = try {
@@ -298,7 +302,7 @@ hook before_routes => sub {
   $c->res->headers->header("Access-Control-Allow-Origin" => "*");
 };
 
-# Needs secured 
+# Needs secured
 # get '/proxy' => sub {
 #   my $c = shift;
 #   $c->render_later;
