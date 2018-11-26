@@ -1,5 +1,8 @@
 <html>
 <head>
+<!--
+  Web-based client. Partially functioning but CORs causes many issues ; UI needs work 
+-->
 <script>
   window.addEventListener('load', function() {
     var iframe = document.getElementById('page_frame');
@@ -29,17 +32,17 @@
     async function random_news(sleep_seconds) {
       await sleep(sleep_seconds || 120000);
       const Http = new XMLHttpRequest();
-    	const url='http://localhost:3000/proxy_random_article?type=random';
-    	// Http.open("GET", url);
-    	// Http.send();
-    	//Http.onreadystatechange=(e)=>{
-    	//	console.log(Http.responseText)
-      //  iframe.src = Http.responseText;
-      //  window.document.domain = Http.responseText;
-      //  iframe.document.domain = Http.responseText;
-      //  url.textContent = Http.responseText;
-    	//}
-      iframe.src = "http://localhost:3000/proxy_random_article?type=random";
+    	const url='http://localhost:3000/random_article?type=random';
+    	Http.open("GET", url);
+    	Http.send();
+    	Http.onreadystatechange=(e)=>{
+    		console.log(Http.responseText)
+        url.textContent = Http.responseText;
+        //iframe.src ='http://localhost:3000/proxy?url=' + Http.responseText;
+        iframe.src = Http.responseText;
+        iframe.document.domain = Http.responseText;
+        window.document.domain = Http.responseText;
+    	}
     }
 
     function next_article() {

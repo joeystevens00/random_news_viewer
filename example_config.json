@@ -9,6 +9,9 @@
     "trump" : {
       "category":"politics"
     },
+    "bernie sanders" : {
+      "category" : "politics"
+    },
     "bitcoin" : {
       "category":"crypto"
     },
@@ -20,6 +23,24 @@
     },
     "crypto" : {
       "category":"crypto"
+    },
+    "ICO" : {
+      "category":"crypto"
+    },
+    "security vulnerability" : {
+      "categories" : ["tech", "security"]
+    },
+    "malware" : {
+      "categories" : ["tech", "security"]
+    },
+    "APT Malware" : {
+      "categories" : ["tech", "security"]
+    },
+    "artificial intelligence" : {
+      "category":"tech"
+    },
+    "a.i." : {
+      "category":"tech"
     },
     "top_headlines" : {
       "categories" : ["generic", "politics"],
@@ -35,6 +56,10 @@
     "log_level" : "debug",
     "request_page_size" : 100,
     "redis_host" : "127.0.0.1:6379",
-    "cache_warm_rate" : 43200
+    "cache_warm_rate" : 43200,
+    "days_to_include_everything" : 7,
+    "language" : "en",
+    "fetch_cache_retry_count" : 4,
+    "empty_cache_cooldown_seconds" : 60
   }
 }
