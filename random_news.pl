@@ -343,9 +343,21 @@ sub topic_to_cache {
   my $metacategory;
   $log->debug("topic_to_cache($topic_name, $tries)");
   if($topic_name eq 'random') {
+    my $deprioritized_categories = $config->{app}->{random_metacategory}->{deprioritized_categories};
+
     my @all_available_categories = @{available_categories()};
     $metacategory = $topic_name;
     my $random_category = @all_available_categories[irand(@all_available_categories)];
+    if(grep { $random_category eq $_ } @$deprioritized_categories) {
+      my $suppression_percentage = $config->{app}->{random_metacategory}->{suppression_percentage};
+      my $allowed_percentage =  100-($suppression_percentage||0);
+      my $suppression_roll = irand(100)+1;
+      my $suppressed = $suppression_roll <= $allowed_percentage ? 0 : 1;
+      $log->debug("Random Metacategory suppression roll ($suppression_roll) for $random_category | allowed_percentage $allowed_percentage | suppression_percentage $suppression_percentage | suppressed $suppressed");
+      if($suppressed) {
+        return topic_to_cache($metacategory ? $metacategory : $category);
+      }
+    }
     $topic_name = $random_category;
   }
   if($topic_name && ref $CATEGORIES->{$topic_name} eq 'ARRAY') {
