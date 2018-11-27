@@ -343,7 +343,7 @@ sub topic_to_cache {
   my $metacategory;
   $log->debug("topic_to_cache($topic_name, $tries)");
   if($topic_name eq 'random') {
-    my $deprioritized_categories = $config->{app}->{random_metacategory}->{deprioritized_categories};
+    my $deprioritized_categories = $config->{app}->{random_metacategory}->{deprioritized_categories} || [];
 
     my @all_available_categories = @{available_categories()};
     $metacategory = $topic_name;

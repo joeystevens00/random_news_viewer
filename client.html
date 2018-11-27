@@ -40,10 +40,19 @@
       return str;
     }
   };
-
+  function getParameterByName(name, url) {
+      if (!url) url = window.location.href;
+      name = name.replace(/[\[\]]/g, '\\$&');
+      var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+          results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, ' '));
+  }
   async function random_news(sleep_seconds) {
+    const type = getParameterByName('type') || "random";
     const Http = new XMLHttpRequest();
-    const rand_article_url='http://localhost:3000/random_article?type=random';
+    const rand_article_url='http://localhost:3000/random_article?type=' + type;
     Http.open("GET", rand_article_url);
     Http.send();
     iframe_connected = false;
@@ -122,6 +131,23 @@
     quit_status = 0;
     clearInterval(downloadTimer);
   }
+  function getCookieValue(a) {
+      var b = document.cookie.match('(^|;)\\s*' + a + '\\s*=\\s*([^;]+)');
+      return b ? b.pop() : '';
+  }
+
+  function app_init() {
+    tos.style.display = "none";
+    random_news();
+
+    window.addEventListener("keyup", function(e) {
+      parse_keyevents(e)
+    });
+
+    iframe.addEventListener("keyup", function(e) {
+      parse_keyevents(e)
+    });
+  }
 
   function parse_keyevents(e) {
     if(e.keyCode == 32) { //space
@@ -134,17 +160,21 @@
   window.addEventListener('load', function() {
     iframe = document.getElementById('page_frame');
     url = document.getElementById('url');
+    tos = document.getElementById('tos');
+    close_button = document.getElementById('close');
+    if(getCookieValue('tos')==1) {
+      app_init();
+    }
+    else {
+      tos.style.display = "block";
+      close_button.onclick = function() {
+        document.cookie = "tos=1";
+        app_init();
+      }
+    }
 
-    random_news();
   });
 
-  window.addEventListener("keyup", function(e) {
-    parse_keyevents(e)
-  });
-
-  iframe.addEventListener("keyup", function(e) {
-    parse_keyevents(e)
-  });
 </script>
 
 <style>
@@ -200,9 +230,61 @@
   height:100%;
 }
 
+.modal {
+    display: none;
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content/Box */
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+}
+
+/* The Close Button */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
 </style>
 </head>
 <body>
+  <!-- The Modal -->
+<div id="tos" class="modal">
+
+  <!-- Modal content -->
+  <div class="modal-content">
+    <p>
+      To use this random-news-viewer.com you must accept the terms of service. random-news-viewer.com displays random news articles that are recent.
+      <h1>TOS</h1>
+      random-news-viewer.com contains content to third-party web sites or services that are not owned or controlled by random-news-viewer.com.
+      random-news-viewer.com has no control over, and assumes no responsibility for, the content, privacy policies, or practices of any third party web sites or services. You further acknowledge and agree that random-news-viewer.com shall not be responsible or liable, directly or indirectly, for any damage or loss caused or alleged to be caused by or in connection with use of or reliance on any such content, goods or services available on or through any such web sites or services.
+      <span id="close" class="close">I accept these terms</span>
+    </p>
+  </div>
+
+</div>
 <div class="header">
   <span id="controls">
     <a id="next" href="javascript:next_article()">next</a> [spacebar]
@@ -215,15 +297,9 @@
     </div>
 </div>
 <div class="page__content-container">
-<iframe id="page_frame" src="https://www.google.com" sandbox="allow-same-origin allow-scripts allow-forms" >
+<iframe id="page_frame" src="" sandbox="allow-same-origin allow-scripts allow-forms" >
   <script>
-    document.addEventListener("keyup", function(e) {
-      parse_keyevents(e)
-    });
-    document.addEventListener('pageshow', function() {
-      console.log(document.location);
-    	random_news()
-    });
+
   </script>
 </iframe>
 </div>
