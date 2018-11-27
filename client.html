@@ -58,7 +58,7 @@
     iframe_connected = false;
     Http.onreadystatechange=(e)=>{
       console.log(Http.responseText)
-      url.textContent = text_truncate(Http.responseText, 80);
+      url.textContent = text_truncate(Http.responseText, 70);
       try { iframe.src = Http.responseText; } catch(e) { console.log(e) }
       try { window.document.domain = Http.responseText; } catch(e) { console.log(e) }
       //iframe.src ='http://localhost:3000/proxy?url=' + Http.responseText;
@@ -266,6 +266,10 @@
     text-decoration: none;
     cursor: pointer;
 }
+#search_options {
+  font-size: .8em;
+  display: inline;
+}
 
 </style>
 </head>
@@ -291,6 +295,10 @@
     <a id="stop" href="javascript:quit_on()">stop countdown</a> [q]
     </span>
     <span id="url"></span><span id="countdowntimer_wrap"><span id="countdowntimer">120 </span> Seconds left</span>
+    <div id="search_options">
+      <a href="?type=politics">politics</a>
+      <a href="?type=tech">tech</a>
+    </div>
     <div id = "attribution">
       <span id="powered_by_newsapi">powered by <a href="https://newsapi.org">NewsAPI.org</a></span><br/>
       <span id="github">source code <a href="https://github.com/joeystevens00/random_news_viewer/">Github</a></span>
