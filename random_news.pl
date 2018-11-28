@@ -387,6 +387,7 @@ sub topic_to_cache {
 
 get '/' => sub {
   my $c = shift;
+
   $c->reply->static('client.html');
 };
 

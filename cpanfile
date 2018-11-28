@@ -5,3 +5,5 @@ requires 'Try::Tiny';
 requires 'Redis';
 requires 'Mojo::Log';
 requires 'Math::Random::Secure';
+requires 'Time::Piece';
+requires 'IO::Socket::SSL';
