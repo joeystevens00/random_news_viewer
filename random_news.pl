@@ -385,6 +385,11 @@ sub topic_to_cache {
   return ($cache, $category);
 }
 
+get '/' => sub {
+  my $c = shift;
+  $c->reply->static('client.html');
+};
+
 get '/random_article' => sub {
   my $c   = shift;
   my $topic_name = $c->param('type');
@@ -399,4 +404,5 @@ get '/random_article' => sub {
 
   $c->render(text => $random_url);
 };
- app->start;
+app->config(hypnotoad => {listen => ['http://*:3000']});
+app->start;

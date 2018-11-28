@@ -52,7 +52,8 @@
   async function random_news(sleep_seconds) {
     const type = getParameterByName('type') || "random";
     const Http = new XMLHttpRequest();
-    const rand_article_url='http://localhost:3000/random_article?type=' + type;
+    const current_domain = window.location.hostname;
+    const rand_article_url='http://' + current_domain +'/random_article?type=' + type;
     Http.open("GET", rand_article_url);
     Http.send();
     iframe_connected = false;
