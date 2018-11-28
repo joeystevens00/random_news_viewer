@@ -53,7 +53,8 @@
     const type = getParameterByName('type') || "random";
     const Http = new XMLHttpRequest();
     const current_domain = window.location.hostname;
-    const rand_article_url='http://' + current_domain +'/random_article?type=' + type;
+    const current_port = window.location.port;
+    const rand_article_url='http://' + current_domain + ':' + current_port + '/random_article?type=' + type;
     Http.open("GET", rand_article_url);
     Http.send();
     iframe_connected = false;
