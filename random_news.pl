@@ -26,7 +26,7 @@ our $config = get_config();
 croak "Unable to get config" unless ref $config eq 'HASH';
 parse_topics(); # Set $REQUEST_FUNCTIONS and @TOPICS
 
-our $log = Mojo::Log->new(level=>$config->{app}->{log_level});
+our $log = Mojo::Log->new(level=>$config->{app}->{log_level}, path=>"news.log");
 our $API_KEY = $config->{app}->{news_api_key};
 our $NEWS_API_ENDPOINT = 'https://newsapi.org/v2/';
 our $UA = Mojo::UserAgent->new;
@@ -151,7 +151,12 @@ sub request_everything {
   my $url = shift;
   my $oldest_day_allowed = Time::Piece->new(time - (ONE_DAY*$config->{app}->{days_to_include_everything}))->strftime("%Y-%m-%d");
   my $language = $config->{app}->{language} || "en";
-  my $default_options = "&from=$oldest_day_allowed&language=$language";
+  my $exclude_domains = $config->{app}->{exclude_domains} || [];
+  my $exclude_domains_str;
+  if(scalar @$exclude_domains > 0) {
+    $exclude_domains_str = "&excludeDomains=" . join(',', @$exclude_domains);
+  }
+  my $default_options = "&from=$oldest_day_allowed&language=$language" . ($exclude_domains_str ? $exclude_domains_str : "");
   my $compiling_results = 1;
   my $compiled_results = {articles=>[]};
   my $page = 1;
@@ -164,7 +169,7 @@ sub request_everything {
       next;
     }
     if ($results->{status} ne "ok") {
-      #$log->warn("Results status not ok: " . Dumper($results));
+      $log->warn("Results status not ok: " . Dumper($results));
       $compiling_results = 0;
       next;
     }

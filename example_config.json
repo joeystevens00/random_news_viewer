@@ -64,6 +64,7 @@
     "random_metacategory" : {
       "deprioritized_categories" : ["top_headlines", "us_news", "generic"],
       "suppression_percentage" : 70
-    }
+    },
+    "exclude_domains" : ["businesswire.com", "ehackingnews.com", "infosecurity-magazine.com", "newslocker.com"]
   }
 }
