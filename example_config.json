@@ -56,7 +56,7 @@
     "log_level" : "debug",
     "request_page_size" : 100,
     "redis_host" : "127.0.0.1:6379",
-    "cache_warm_rate" : 43200,
+    "cache_warm_rate" : 86400,
     "days_to_include_everything" : 7,
     "language" : "en",
     "fetch_cache_retry_count" : 4,
@@ -65,6 +65,6 @@
       "deprioritized_categories" : ["top_headlines", "us_news", "generic"],
       "suppression_percentage" : 70
     },
-    "exclude_domains" : ["businesswire.com", "ehackingnews.com", "infosecurity-magazine.com", "newslocker.com"]
+    "exclude_domains" : []
   }
 }
