@@ -31,10 +31,14 @@ our $API_KEY = $config->{app}->{news_api_key};
 our $NEWS_API_ENDPOINT = 'https://newsapi.org/v2/';
 our $UA = Mojo::UserAgent->new;
 our $AUTH = "&apiKey=$API_KEY";
-our $REQUEST_PAGE_SIZE = $config->{app}->{request_page_size};
+our $REQUEST_PAGE_SIZE = $config->{app}->{request_page_size} || 100;
 our $DEFAULT_REQUEST_OPTIONS = "&pageSize=$REQUEST_PAGE_SIZE"; # For all requests
 our $KNOWN_EMPTY_CACHES = {}; # Provides a cooldown for caches that are known to be empty to prevent selecting them multiple times in a row
-
+our $REQUEST_COUNTER = {
+  refresh_time => time,
+  count => 0,
+  cooldown => 0
+};
 our $REDIS = Redis->new(host=>$config->{app}->{redis_host}, onconnect=>sub {
   $log->debug("Redis connected " . $config->{app}->{redis_host});
 });
@@ -121,11 +125,11 @@ sub request {
   my $request_url = $NEWS_API_ENDPOINT . $url . $AUTH . $DEFAULT_REQUEST_OPTIONS;
   $log->debug("$method $request_url");
   try {
-    decode_json ($UA->$method($request_url)->result->body);
+    (1, (decode_json ($UA->$method($request_url)->result->body)));
   }
   catch {
     $log->warn($_);
-    undef;
+    (undef, undef);
   }
 }
 
@@ -138,6 +142,8 @@ sub check_all_cache_cooldowns {
     }
   }
 }
+
+sub shuffle_topics {  @{Mojo::Collection->new(@TOPICS)->shuffle->to_array} }
 
 # cache_cooldown_passed($cache_name)
 # checks if $cache_name is ready to be done with it's cooldown
@@ -152,6 +158,7 @@ sub request_everything {
   my $oldest_day_allowed = Time::Piece->new(time - (ONE_DAY*$config->{app}->{days_to_include_everything}))->strftime("%Y-%m-%d");
   my $language = $config->{app}->{language} || "en";
   my $exclude_domains = $config->{app}->{exclude_domains} || [];
+  my $developer_account = $config->{app}->{developer_account} || 0;
   my $exclude_domains_str;
   if(scalar @$exclude_domains > 0) {
     $exclude_domains_str = "&excludeDomains=" . join(',', @$exclude_domains);
@@ -160,7 +167,25 @@ sub request_everything {
   my $compiling_results = 1;
   my $compiled_results = {articles=>[]};
   my $page = 1;
+  my $totalResults;
+  my $num_requests = 0;
   while($compiling_results) {
+    # Developer accounts can only request up to page 10
+    if($developer_account && $page eq 11) {
+      $log->debug("Is developer account not requesting page 11 for $url");
+      $compiling_results = 0;
+      next;
+    }
+    # Hit end of results
+    if($totalResults) {
+      if($page*$REQUEST_PAGE_SIZE >= $totalResults) {
+        $log->debug("Hit end of results for $url on page $page (request_size $REQUEST_PAGE_SIZE) with totalResults $totalResults");
+
+        $compiling_results = 0;
+        next;
+      }
+    }
+    $num_requests++;
     my $results = request($url . "&page=$page" . $default_options);
 
     unless(ref $results eq 'HASH') {
@@ -170,6 +195,11 @@ sub request_everything {
     }
     if ($results->{status} ne "ok") {
       $log->warn("Results status not ok: " . Dumper($results));
+      if($results->{code} eq 'rateLimited') {
+        $log->warn("Detected that API has rateLimited. init request cooldown");
+        set_warming_cooldown();
+        warm_caches_in_6_hours();
+      }
       $compiling_results = 0;
       next;
     }
@@ -177,12 +207,12 @@ sub request_everything {
       $compiling_results = 0;
       next;
     }
-    my $total_results = $results->{totalResults};
-    $compiled_results->{totalResults} = $total_results unless defined $compiled_results->{totalResults};
+    $totalResults = $results->{totalResults};
+    $compiled_results->{totalResults} = $totalResults unless defined $compiled_results->{totalResults};
     push @{$compiled_results->{articles}}, @{$results->{articles}} if ref $results->{articles} eq 'ARRAY';
     $page++;
   }
-  $compiled_results;
+  ($num_requests, $compiled_results);
 }
 
 # warm_cache($topic_name, $json)
@@ -191,14 +221,20 @@ sub request_everything {
 sub warm_cache {
   my ($topic_name, $json) = @_;
   $log->debug("Warming cache: $topic_name");
-
+  my $num_requests;
   unless(ref $json eq 'HASH') {
-    $json = $REQUEST_FUNCTIONS->{$topic_name}->();
+    ($num_requests, $json) = $REQUEST_FUNCTIONS->{$topic_name}->();
   }
   unless(ref $json eq 'HASH') {
     $log->error("Missing json can't warm cache");
     return 0;
   }
+
+  if(cache_size($json) eq 0) {
+    $log->warn("cache_warmer given empty cache for $topic_name... not updating");
+    return 0;
+  }
+
 
   $json->{refresh_time} = time;
   my $ret = try {
@@ -209,7 +245,7 @@ sub warm_cache {
     $log->warn($_);
     0;
   };
-  $ret;
+  ($num_requests, $ret);
 }
 
 # fetch_cache($topic_name)
@@ -280,21 +316,67 @@ sub cache_size {
   }
 }
 
+sub warm_caches_in_6_hours {
+  my $loop = Mojo::IOLoop->singleton;
+  $loop->timer( six_hours() => sub {
+    $log->debug("6 hour period should be complete... resuming warm_caches");
+    warm_caches();
+  });
+}
+
+# six_hours(offset)
+# returns 6 hours of seconds (minus offset or 0)
+sub six_hours {  (60*60*6)-(shift||0) }
+
+sub reset_warming_cooldown {
+  $REQUEST_COUNTER->{cooldown} = 0;
+  $REQUEST_COUNTER->{refresh_time} = time;
+  $REQUEST_COUNTER->{count} = 0;
+}
+
+sub set_warming_cooldown {
+  $REQUEST_COUNTER->{cooldown} = 1;
+  $REQUEST_COUNTER->{refresh_time} = time;
+}
+
 # warm_caches
 # warms all of the caches if they need it
 # Config Options:
 # cache_warm_rate : Number of seconds that must be exceeded before cache is warmed
 sub warm_caches {
   my $cache_warm_rate = $config->{app}->{cache_warm_rate};
+  my $max_requests_to_make = $config->{app}->{allowed_requests_6_hour} || 0;
+
   $log->debug("Warm Caches");
-  for(@TOPICS) {
-    my $cache = fetch_cache($_);
-    unless (defined $cache || defined $cache->{refresh_time}) {
-      warm_cache($_);
+  my $ret;
+  my $num_requests;
+  for(shuffle_topics()) {
+    if($REQUEST_COUNTER->{cooldown} && time - $REQUEST_COUNTER->{refresh_time} >= six_hours(1)) {
+      reset_warming_cooldown();
+      $log->debug("Ending cooldown period for requests");
+    }
+    if($REQUEST_COUNTER->{cooldown}) {
       next;
     }
+    # Maximum requests hit for 6 hour time period
+    if($max_requests_to_make && $REQUEST_COUNTER->{count} >= $max_requests_to_make) {
+      set_warming_cooldown();
+      $log->debug("Maximum requests hit for 6 hour period");
+      warm_caches_in_6_hours();
+      next;
+    }
+    my $cache = fetch_cache($_);
+    $num_requests = 0;
+    # Cache doesn't exist
+    unless (defined $cache && defined $cache->{refresh_time}) {
+      ($num_requests, $ret) = warm_cache($_);
+      $REQUEST_COUNTER->{count} += $num_requests if $num_requests;
+      next;
+    }
+    # Cache exists but is stale
     if(time - $cache->{refresh_time} > ($cache_warm_rate-1)) {
-      warm_cache($_);
+      ($num_requests, $ret) = warm_cache($_);
+      $REQUEST_COUNTER->{count} += $num_requests if $num_requests;
     }
   }
 }
