@@ -65,6 +65,8 @@
       "deprioritized_categories" : ["top_headlines", "us_news", "generic"],
       "suppression_percentage" : 70
     },
-    "exclude_domains" : []
+    "exclude_domains" : [],
+    "developer_account" : true,
+    "allowed_requests_6_hour" : 125
   }
 }
